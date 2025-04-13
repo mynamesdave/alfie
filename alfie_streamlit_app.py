@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Alfie: Covered Call Assistant", layout="centered")
 
@@ -50,6 +51,22 @@ if premium_input.strip() != "":
         st.write(f"**📦 Total Premium (for {contracts_input} contract(s)):** ${total_premium:,.2f}")
     except:
         st.warning("Could not parse premium input. Please enter a number like 3.50")
+
+# Bell Curve Visualization
+st.subheader("📉 Projected Price Distribution")
+price_range = np.linspace(current_price - 3 * sigma, current_price + 3 * sigma, 100)
+probability_density = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((price_range - current_price) / sigma) ** 2)
+
+fig, ax = plt.subplots()
+ax.plot(price_range, probability_density, label='Normal Distribution')
+ax.axvline(current_price, color='green', linestyle='--', label='Current Price')
+ax.axvline(strike_price, color='red', linestyle='--', label='Suggested Strike')
+ax.fill_between(price_range, 0, probability_density, alpha=0.1)
+ax.set_xlabel('Price')
+ax.set_ylabel('Probability Density')
+ax.set_title('Projected TSLA Price Distribution')
+ax.legend()
+st.pyplot(fig)
 
 st.markdown("---")
 st.caption("Built by Alfie to help you trade smarter. V1.1")
