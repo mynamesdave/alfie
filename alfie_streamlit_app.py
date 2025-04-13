@@ -14,8 +14,7 @@ st.sidebar.header("Settings")
 lookback_days = st.sidebar.slider("Lookback period for volatility (days):", 10, 60, 20)
 duration_days = st.sidebar.slider("Option duration (days):", 7, 30, 14)
 std_dev_multiplier = st.sidebar.selectbox("Standard deviation multiplier:", [0.5, 1, 1.5, 2], index=1)
-premium_input = st.sidebar.text_input("Premium per contract ($)", "")
-contracts_input = st.sidebar.number_input("# of contracts (1 contract = 100 shares)", min_value=1, value=1)
+premium_input = st.sidebar.text_input("Option Premium ($)", "")
 
 # Fetch TSLA data
 tsla = yf.Ticker("TSLA")
@@ -40,16 +39,12 @@ st.write(f"**{lookback_days}-Day Historical Volatility (Annualized):** {hv:.2%}"
 st.write(f"**Projected {duration_days}-Day +{std_dev_multiplier}σ Move:** +${sigma:,.2f}")
 st.write(f"**📈 Suggested Covered Call Strike:** ${strike_price}")
 
-# Optional: Yield and total premium Calculation
+# Optional: Yield Calculation
 if premium_input.strip() != "":
     try:
         premium = float(premium_input)
-        total_shares = contracts_input * 100
-        total_premium = premium * contracts_input * 100
         yield_percent = (premium / current_price) * 100
-
-        st.write(f"**💰 Estimated Yield per Contract:** {yield_percent:.2f}%")
-        st.write(f"**📦 Total Premium (for {contracts_input} contract(s)):** ${total_premium:,.2f}")
+        st.write(f"**💰 Estimated Yield:** {yield_percent:.2f}%")
     except:
         st.warning("Could not parse premium input. Please enter a number like 3.50")
 
