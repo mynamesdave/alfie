@@ -3,6 +3,7 @@ import yfinance as yf
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Alfie: Covered Call Assistant", layout="centered")
 
@@ -18,6 +19,14 @@ premium_input = st.sidebar.text_input("Option Premium ($)", "")
 theta_input = st.sidebar.text_input("Option Theta (e.g., -0.15)", "")
 contracts_input = st.sidebar.number_input("Contracts Sold:", min_value=1, value=1)
 
+# Calculate expiration date (next available Friday at or after duration_days)
+today = datetime.today()
+target_date = today + timedelta(days=duration_days)
+# find the next Friday on or after target_date
+while target_date.weekday() != 4:  # 4 = Friday
+    target_date += timedelta(days=1)
+actual_days_to_expiry = (target_date - today).days
+
 # Fetch TSLA data
 tsla = yf.Ticker("TSLA")
 data = tsla.history(period=f"{lookback_days+5}d")  # Buffer to ensure clean data
@@ -30,7 +39,7 @@ hv = np.std(log_returns) * np.sqrt(252)  # Annualized HV
 current_price = data['Close'][-1]
 
 # Projected move
-base_sigma = hv * current_price * math.sqrt(duration_days / 252)
+base_sigma = hv * current_price * math.sqrt(actual_days_to_expiry / 252)
 sigma = base_sigma * std_dev_multiplier
 strike_price = math.ceil((current_price + sigma) / 5) * 5  # Round to nearest $5
 
@@ -38,7 +47,8 @@ strike_price = math.ceil((current_price + sigma) / 5) * 5  # Round to nearest $5
 st.subheader("📊 TSLA Snapshot")
 st.write(f"**Current TSLA Price:** ${current_price:,.2f}")
 st.write(f"**{lookback_days}-Day Historical Volatility (Annualized):** {hv:.2%}")
-st.write(f"**Projected {duration_days}-Day +{std_dev_multiplier}σ Move:** +${sigma:,.2f}")
+st.write(f"**Next Expiration Date:** {target_date.strftime('%A, %B %d, %Y')} ({actual_days_to_expiry} days out)")
+st.write(f"**Projected {actual_days_to_expiry}-Day +{std_dev_multiplier}σ Move:** +${sigma:,.2f}")
 st.write(f"**📈 Suggested Covered Call Strike:** ${strike_price}")
 
 # Optional: Yield and Total Value Calculation
@@ -57,7 +67,7 @@ if premium_input.strip() != "" and theta_input.strip() != "":
     try:
         premium = float(premium_input)
         theta = float(theta_input)
-        days = np.arange(0, duration_days + 1)
+        days = np.arange(0, actual_days_to_expiry + 1)
         decay = premium + theta * days  # theta is negative
         decay = np.maximum(decay, 0)  # option value can't go below 0
         total_decay = decay * contracts_input * 100
