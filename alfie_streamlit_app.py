@@ -15,6 +15,8 @@ lookback_days = st.sidebar.slider("Lookback period for volatility (days):", 10, 
 duration_days = st.sidebar.slider("Option duration (days):", 7, 30, 14)
 std_dev_multiplier = st.sidebar.selectbox("Standard deviation multiplier:", [0.5, 1, 1.5, 2], index=1)
 premium_input = st.sidebar.text_input("Option Premium ($)", "")
+theta_input = st.sidebar.text_input("Option Theta (e.g., -0.15)", "")
+contracts_input = st.sidebar.number_input("Contracts Sold:", min_value=1, value=1)
 
 # Fetch TSLA data
 tsla = yf.Ticker("TSLA")
@@ -39,14 +41,38 @@ st.write(f"**{lookback_days}-Day Historical Volatility (Annualized):** {hv:.2%}"
 st.write(f"**Projected {duration_days}-Day +{std_dev_multiplier}σ Move:** +${sigma:,.2f}")
 st.write(f"**📈 Suggested Covered Call Strike:** ${strike_price}")
 
-# Optional: Yield Calculation
+# Optional: Yield and Total Value Calculation
 if premium_input.strip() != "":
     try:
         premium = float(premium_input)
         yield_percent = (premium / current_price) * 100
+        total_value = premium * contracts_input * 100
         st.write(f"**💰 Estimated Yield:** {yield_percent:.2f}%")
+        st.write(f"**📦 Total Premium Collected:** ${total_value:,.2f}")
     except:
         st.warning("Could not parse premium input. Please enter a number like 3.50")
+
+# Theta Decay Graph
+if premium_input.strip() != "" and theta_input.strip() != "":
+    try:
+        premium = float(premium_input)
+        theta = float(theta_input)
+        days = np.arange(0, duration_days + 1)
+        decay = premium + theta * days  # theta is negative
+        decay = np.maximum(decay, 0)  # option value can't go below 0
+        total_decay = decay * contracts_input * 100
+
+        st.subheader("⏳ Option Value Over Time (Theta Decay)")
+        fig2, ax2 = plt.subplots()
+        ax2.plot(days, total_decay, label='Total Option Value ($)', color='orange')
+        ax2.set_xlabel('Days Until Expiration')
+        ax2.set_ylabel('Total Option Value ($)')
+        ax2.set_title('Theta Decay Over Time')
+        ax2.grid(True)
+        ax2.legend()
+        st.pyplot(fig2)
+    except:
+        st.warning("Could not parse theta input. Please enter a number like -0.15")
 
 # Bell Curve Visualization with 1σ, 2σ, 3σ lines
 st.subheader("📉 Projected Price Distribution")
