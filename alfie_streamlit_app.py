@@ -29,7 +29,8 @@ hv = np.std(log_returns) * np.sqrt(252)  # Annualized HV
 current_price = data['Close'][-1]
 
 # Projected move
-sigma = hv * current_price * math.sqrt(duration_days / 252) * std_dev_multiplier
+base_sigma = hv * current_price * math.sqrt(duration_days / 252)
+sigma = base_sigma * std_dev_multiplier
 strike_price = math.ceil((current_price + sigma) / 5) * 5  # Round to nearest $5
 
 # Display Outputs
@@ -52,15 +53,21 @@ if premium_input.strip() != "":
     except:
         st.warning("Could not parse premium input. Please enter a number like 3.50")
 
-# Bell Curve Visualization
+# Bell Curve Visualization with 1σ, 2σ, 3σ lines
 st.subheader("📉 Projected Price Distribution")
-price_range = np.linspace(current_price - 3 * sigma, current_price + 3 * sigma, 100)
-probability_density = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((price_range - current_price) / sigma) ** 2)
+price_range = np.linspace(current_price - 3 * base_sigma, current_price + 3 * base_sigma, 300)
+probability_density = (1 / (base_sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((price_range - current_price) / base_sigma) ** 2)
 
 fig, ax = plt.subplots()
 ax.plot(price_range, probability_density, label='Normal Distribution')
 ax.axvline(current_price, color='green', linestyle='--', label='Current Price')
 ax.axvline(strike_price, color='red', linestyle='--', label='Suggested Strike')
+
+# Add 1σ, 2σ, 3σ lines
+for i in [1, 2, 3]:
+    ax.axvline(current_price + i * base_sigma, color='blue', linestyle=':', label=f'+{i}σ')
+    ax.axvline(current_price - i * base_sigma, color='blue', linestyle=':', label=f'-{i}σ')
+
 ax.fill_between(price_range, 0, probability_density, alpha=0.1)
 ax.set_xlabel('Price')
 ax.set_ylabel('Probability Density')
